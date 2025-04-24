@@ -1,10 +1,13 @@
 from flask import Flask
-from api.fetch import fetch_bp  # 原本就有的
-from api.fetch_real import fetch_real_bp  # 👈 新加的
+from flask_cors import CORS  # ✅ 新增
+from api.fetch_real import fetch_real_bp
+from api.fetch import fetch_bp
 
 app = Flask(__name__)
+CORS(app)  # ✅ 启用全局跨域支持
+
 app.register_blueprint(fetch_bp)
-app.register_blueprint(fetch_real_bp)     # 👈 新加的
+app.register_blueprint(fetch_real_bp)
 
 @app.route('/')
 def index():
