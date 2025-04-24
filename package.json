@@ -1,0 +1,10 @@
+
+{
+  "name": "getQzoneHistory-cloud",
+  "version": "1.0.0",
+  "main": "api/fetch.js",
+  "scripts": {
+    "start": "node api/fetch.js"
+  },
+  "dependencies": {}
+}
