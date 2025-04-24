@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from getQzoneHistory import get_qzone_history_by_cookie  # 假设你函数名是这个
 
 fetch_real_bp = Blueprint('fetch_real', __name__)
 
@@ -10,14 +11,14 @@ def fetch_real_data():
     if not cookie:
         return jsonify({"error": "未提供 cookie"}), 400
 
-    # ✅ 模拟返回结构（下一步我们将替换为真实请求）
-    fake_data = {
-        "message": "成功接收到 Cookie",
-        "cookie": cookie[:30] + "...",
-        "posts": [
-            {"time": "2020-01-01", "content": "这是你的一条说说"},
-            {"time": "2020-02-02", "content": "又一条说说的内容"},
-        ]
-    }
-
-    return jsonify(fake_data)
+    try:
+        posts = get_qzone_history_by_cookie(cookie)
+        return jsonify({
+            "message": "抓取成功",
+            "posts": posts
+        })
+    except Exception as e:
+        return jsonify({
+            "error": "抓取失败",
+            "detail": str(e)
+        }), 500
