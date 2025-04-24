@@ -1,28 +1,23 @@
 from flask import Blueprint, request, jsonify
-import requests
 
 fetch_real_bp = Blueprint('fetch_real', __name__)
 
 @fetch_real_bp.route('/api/fetch_real', methods=['POST'])
 def fetch_real_data():
-    cookie = request.json.get('cookie')
-    if not cookie:
-        return jsonify({"error": "请提供有效的 Cookie 参数"}), 400
+    data = request.get_json()
+    cookie = data.get('cookie')
 
-    # 使用 QQ 空间 JSONP 接口，模拟请求获取说说列表
-    headers = {
-        "Cookie": cookie,
-        "User-Agent": "Mozilla/5.0"
+    if not cookie:
+        return jsonify({"error": "未提供 cookie"}), 400
+
+    # ✅ 模拟返回结构（下一步我们将替换为真实请求）
+    fake_data = {
+        "message": "成功接收到 Cookie",
+        "cookie": cookie[:30] + "...",
+        "posts": [
+            {"time": "2020-01-01", "content": "这是你的一条说说"},
+            {"time": "2020-02-02", "content": "又一条说说的内容"},
+        ]
     }
 
-    try:
-        response = requests.get(
-            "https://h5.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6?uin=YOUR_UIN&format=json&num=10",
-            headers=headers
-        )
-        return jsonify({
-            "message": "抓取成功（示例）",
-            "raw_response": response.text
-        })
-    except Exception as e:
-        return jsonify({"error": f"请求出错: {str(e)}"})
+    return jsonify(fake_data)
