@@ -1,31 +1,66 @@
-from flask import Flask
-from flask_cors import CORS  # ✅ 跨域支持
-from api.fetch_real import fetch_real_bp
-from api.fetch import fetch_bp
+import requests
+import re
+import time
+import json
 
-app = Flask(__name__)
-CORS(app)  # ✅ 启用跨域支持
+# 计算 g_tk：QQ 空间接口需要的验证参数
+def get_g_tk(skey):
+    hash_value = 5381
+    for c in skey:
+        hash_value += (hash_value << 5) + ord(c)
+    return hash_value & 0x7fffffff
 
-# 注册路由蓝图
-app.register_blueprint(fetch_bp)
-app.register_blueprint(fetch_real_bp)
-
-@app.route('/')
-def index():
-    return '服务已启动，准备接入QQ空间数据接口...'
-
-import os
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-
-# ✅ 模拟真实抓取的函数（后期可替换为正式请求逻辑）
+# 主函数：通过用户粘贴的 cookie 真实抓取 QQ 空间说说
 def get_qzone_history_by_cookie(cookie: str) -> list:
-    """
-    模拟从 QQ 空间抓取历史说说数据
-    实际抓取逻辑后面可以替换，这里是返回演示数据结构
-    """
-    return [
-        {"time": "2020-01-01", "content": "这是你真实的说说"},
-        {"time": "2020-02-02", "content": "这是另一条历史动态"}
-    ]
+    # 从 cookie 提取 skey 和 uin
+    skey_match = re.search(r'skey=([^;]+)', cookie)
+    uin_match = re.search(r'uin=o?(\d+)', cookie)
+
+    if not skey_match or not uin_match:
+        return [{"error": "cookie 中缺少 skey 或 uin"}]
+
+    skey = skey_match.group(1)
+    uin = uin_match.group(1)
+    g_tk = get_g_tk(skey)
+
+    headers = {
+        "cookie": cookie,
+        "user-agent": "Mozilla/5.0"
+    }
+
+    result = []
+    pos = 0
+    while True:
+        url = f"https://h5.qzone.qq.com/proxy/domain/taotao.qq.com/cgi-bin/emotion_cgi_msglist_v6?uin={uin}&inCharset=utf-8&outCharset=utf-8&hostUin={uin}&notice=0&sort=0&pos={pos}&num=20&format=jsonp&g_tk={g_tk}"
+        res = requests.get(url, headers=headers)
+
+        if res.status_code != 200:
+            break
+
+        try:
+            # QQ 返回 JSONP 格式，需要手动提取出 JSON
+            text = res.text
+            json_text = re.search(r"_Callback\((.*)\);", text).group(1)
+            data = json.loads(json_text)
+        except Exception:
+            break
+
+        items = data.get("msglist")
+        if not items:
+            break
+
+        for item in items:
+            content = item.get("content", "")
+            time_raw = item.get("created_time", "")
+            time_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time_raw))
+            result.append({
+                "time": time_str,
+                "content": content
+            })
+
+        pos += 20
+        if pos > 100:  # 为防止太多数据，一次最多抓 100 条
+            break
+
+    return result if result else [{"notice": "未抓取到说说，可能 Cookie 失效"}]
+
