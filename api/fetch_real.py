@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from getQzoneHistory import get_qzone_history_by_cookie  # 假设你函数名是这个
+from getQzoneHistory import get_qzone_history_by_cookie  # ✅ 引入真实爬虫函数
 
 fetch_real_bp = Blueprint('fetch_real', __name__)
 
@@ -15,6 +15,7 @@ def fetch_real_data():
         posts = get_qzone_history_by_cookie(cookie)
         return jsonify({
             "message": "抓取成功",
+            "cookie": cookie[:30] + "...",  # ✅ 方便调试
             "posts": posts
         })
     except Exception as e:
