@@ -6,6 +6,7 @@ from api.fetch import fetch_bp
 app = Flask(__name__)
 CORS(app)
 
+# 注册接口蓝图
 app.register_blueprint(fetch_bp)
 app.register_blueprint(fetch_real_bp)
 
@@ -13,24 +14,23 @@ app.register_blueprint(fetch_real_bp)
 def index():
     return '服务已启动，准备接入QQ空间数据接口...'
 
-# ✅ 必须绑定 0.0.0.0 和 Render 自动分配的 PORT，否则无法访问
-import os
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+# =============================
+# QQ空间真实抓取函数（你原来的爬虫逻辑）
+# =============================
 
-# ✅ 以下是你原来的真实抓取函数（保留不动）
 import requests
 import re
 import time
 import json
 
+# 计算 g_tk：QQ 空间接口需要的验证参数
 def get_g_tk(skey):
     hash_value = 5381
     for c in skey:
         hash_value += (hash_value << 5) + ord(c)
     return hash_value & 0x7fffffff
 
+# 主函数：通过用户粘贴的 cookie 抓取 QQ 空间说说
 def get_qzone_history_by_cookie(cookie: str) -> list:
     skey_match = re.search(r'skey=([^;]+)', cookie)
     uin_match = re.search(r'uin=o?(\d+)', cookie)
@@ -81,3 +81,13 @@ def get_qzone_history_by_cookie(cookie: str) -> list:
             break
 
     return result if result else [{"notice": "未抓取到说说，可能 Cookie 失效"}]
+
+# =============================
+# ✅ 必须放在最底部！！Render 才能监听成功
+# =============================
+import os
+
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+
